@@ -149,14 +149,12 @@ To adapt this application for different robots:
 
 - **[teleop_fetch ROS Package](../teleop_fetch-AngelsContr)** - Robot-side ROS implementation for Brewie robot
 
-## License
-
-[Your License Here]
 
 ## Authors
 
-[Your Team/Organization]
+Homebrew Robotics Club
 
 ## Version
 
 1.0.0
+
