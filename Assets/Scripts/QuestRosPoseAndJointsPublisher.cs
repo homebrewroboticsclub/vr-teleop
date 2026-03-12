@@ -29,6 +29,15 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
     [Tooltip("Pause after loosing controller tracking, before switching to hands")]
     public float handsGraceSeconds = 0.25f;
 
+    [Header("Relative pose mode")]
+    [Tooltip("If true, hand/controller position is sent as (handWorld - headWorld), without rotating into head local frame.")]
+    public bool positionRelativeToHeadButIgnoreHeadRotation = true;
+
+    [Tooltip("If true, hand/controller orientation is sent relative to head rotation. If false, absolute orientation is sent.")]
+    public bool orientationRelativeToHead = true;
+
+    private Coroutine sendLoopCoroutine;
+
     private WebSocket ws;
     private WaitForSeconds wait;
     private float lastDebug;
@@ -63,12 +72,22 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
     public void InitConnection()
     {
         wsUrl = $"ws://{IpText.text}:{PortText.text}";
+
+        Disconnect();
         Connect();
-        StartCoroutine(SendLoop());
+
+        if (sendLoopCoroutine == null)
+            sendLoopCoroutine = StartCoroutine(SendLoop());
     }
 
     public void Disconnect()
     {
+        if (sendLoopCoroutine != null)
+        {
+            StopCoroutine(sendLoopCoroutine);
+            sendLoopCoroutine = null;
+        }
+
         try
         {
             if (ws != null && ws.ReadyState == WebSocketState.Open)
@@ -76,9 +95,16 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
                 ws.Send(JsonConvert.SerializeObject(new { op = "unadvertise", topic = poseArrayTopic }));
                 ws.Send(JsonConvert.SerializeObject(new { op = "unadvertise", topic = jointStateTopic }));
             }
+        }
+        catch { }
+
+        try
+        {
             ws?.Close();
         }
         catch { }
+
+        ws = null;
     }
 
     void OnDisable()
@@ -317,22 +343,42 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
         return false;
     }
 
-    static JObject RelToHeadFromDevice(InputDevice dev, Vector3 headPosW, Quaternion headRotW)
+    JObject RelToHeadFromDevice(InputDevice dev, Vector3 headPosW, Quaternion headRotW)
     {
         if (!dev.isValid) return PoseJson(Vector3.zero, Quaternion.identity);
         if (!dev.TryGetFeatureValue(CommonUsages.devicePosition, out Vector3 pW)) return PoseJson(Vector3.zero, Quaternion.identity);
         if (!dev.TryGetFeatureValue(CommonUsages.deviceRotation, out Quaternion rW)) return PoseJson(Vector3.zero, Quaternion.identity);
 
-        var pRel = Quaternion.Inverse(headRotW) * (pW - headPosW);
-        var rRel = Quaternion.Inverse(headRotW) * rW;
-        return PoseJson(pRel, rRel);
+        return RelativePose(
+            pW, rW,
+            headPosW, headRotW,
+            positionRelativeToHeadButIgnoreHeadRotation,
+            orientationRelativeToHead
+        );
     }
 
-    static JObject RelToHeadFromWorld(bool tracked, Vector3 pW, Quaternion rW, Vector3 headPosW, Quaternion headRotW)
+    JObject RelToHeadFromWorld(bool tracked, Vector3 pW, Quaternion rW, Vector3 headPosW, Quaternion headRotW)
     {
         if (!tracked) return PoseJson(Vector3.zero, Quaternion.identity);
-        var pRel = Quaternion.Inverse(headRotW) * (pW - headPosW);
-        var rRel = Quaternion.Inverse(headRotW) * rW;
+
+        return RelativePose(
+            pW, rW,
+            headPosW, headRotW,
+            positionRelativeToHeadButIgnoreHeadRotation,
+            orientationRelativeToHead
+        );
+    }
+
+    JObject RelativePose(Vector3 objPosW, Quaternion objRotW, Vector3 headPosW, Quaternion headRotW, bool ignoreHeadRotationForPosition, bool orientationRelativeToHead)
+    {
+        Vector3 pRel = ignoreHeadRotationForPosition
+            ? (objPosW - headPosW)
+            : (Quaternion.Inverse(headRotW) * (objPosW - headPosW));
+
+        Quaternion rRel = orientationRelativeToHead
+            ? (Quaternion.Inverse(headRotW) * objRotW)
+            : objRotW;
+
         return PoseJson(pRel, rRel);
     }
 
