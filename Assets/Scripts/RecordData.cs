@@ -8,4 +8,9 @@ public class RecordData : MonoBehaviour
 {
     public Button InputTextButton;
     public TMP_Text TextField;
+
+    public void DestroyRecord()
+    {
+        FindFirstObjectByType<DatasetManager>().DeleteRecord(gameObject);
+    }
 }

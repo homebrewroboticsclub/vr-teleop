@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,11 +9,22 @@ public class DatasetManager : MonoBehaviour
     [SerializeField] private GameObject recordUI;
     [SerializeField] private NumberInput keyboardManager;
 
-    private IEnumerator Start()
-    {
-        yield return new WaitForSeconds(1f);
-        AddNewRecord();
-    }
+    [SerializeField] private Button sendRecordsButton;
+    [SerializeField] private Button clearAllRecordsButton;
+
+    private List<GameObject> currentRecords = new List<GameObject>();
+
+    //private IEnumerator Start()
+    //{
+    //    yield return new WaitForSeconds(1f);
+    //    AddNewRecord();
+    //    yield return null;
+    //    AddNewRecord();
+    //    yield return null;
+    //    AddNewRecord();
+    //    yield return null;
+    //    AddNewRecord();
+    //}
 
     public void AddNewRecord()
     {
@@ -53,5 +65,33 @@ public class DatasetManager : MonoBehaviour
         });
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(parentForLayout);
+        currentRecords.Add(record);
+        if (!sendRecordsButton.interactable || !clearAllRecordsButton.interactable)
+        {
+            sendRecordsButton.interactable = true;
+            clearAllRecordsButton.interactable = true;
+        }
+    }
+
+    public void DeleteRecord(GameObject record)
+    {
+        currentRecords.Remove(record);
+        Destroy(record);
+        if (currentRecords.Count == 0)
+        {
+            sendRecordsButton.interactable = false;
+            clearAllRecordsButton.interactable = false;
+        }
+    }
+
+    public void ClearAllRecords()
+    {
+        while (currentRecords.Count > 0)
+        {
+            Destroy(currentRecords[0]);
+            currentRecords.RemoveAt(0);
+        }
+        sendRecordsButton.interactable = false;
+        clearAllRecordsButton.interactable = false;
     }
 }

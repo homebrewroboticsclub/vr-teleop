@@ -16,9 +16,14 @@ public class NumberInput : MonoBehaviour
 
     public bool Lock = false;
     public bool NeedToSave = false;
+    public bool NeedToChangeColorInDefault = false;
 
     [SerializeField]
     private Color defaultTextColor = Color.gray;
+    [SerializeField]
+    private Color activeTextColor = Color.white;
+    [SerializeField]
+    private Color disabledTextColor = Color.white;
 
     public void InputText(string symbol)
     {
@@ -27,7 +32,7 @@ public class NumberInput : MonoBehaviour
             if (textFields.inputedValue == string.Empty)
             {
                 inputText.text = string.Empty;
-                inputText.color = Color.white;
+                inputText.color = activeTextColor;
             }
             if (inputText.text.Length < 15)
             {
@@ -45,7 +50,10 @@ public class NumberInput : MonoBehaviour
             if (textFields.inputedValue == string.Empty)
             {
                 inputText.text = textFields.defaultValue;
-                inputText.color = defaultTextColor;
+                if (!NeedToChangeColorInDefault)
+                {
+                    inputText.color = defaultTextColor;
+                }
             }
         }
     }
@@ -53,13 +61,29 @@ public class NumberInput : MonoBehaviour
     public void Activate(TMP_Text text)
     {
         if (Lock) return;
+        if (inputText != null)
+        {
+            Deactivate();
+        }
         inputText = text;
         textFields = inputText.GetComponent<DefaultTextValue>();
+        if (NeedToChangeColorInDefault || inputText.text != textFields.defaultValue)
+        {
+            inputText.color = activeTextColor;
+        }
         ChangeState(true);
     }
 
     public void Deactivate()
     {
+        if (inputText.text == textFields.defaultValue)
+        {
+            inputText.color = defaultTextColor;
+        }
+        else
+        {
+            inputText.color = disabledTextColor;
+        }
         inputText = null;
         ChangeState(false);
         if (NeedToSave)

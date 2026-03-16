@@ -41,6 +41,19 @@ public class RosbridgeImageSubscriber : MonoBehaviour
     public float connectTimeoutSec = 10f;
     public float pingIntervalSec = 5f;
 
+    [Header("Image Stream Watchdog")]
+    [Tooltip("How long to wait for the first image frame after subscribe.")]
+    public float firstImageTimeoutSec = 3f;
+
+    [Tooltip("How long stream may stay silent after frames had already arrived.")]
+    public float imageSilenceTimeoutSec = 5f;
+
+    [Tooltip("How many times to retry image topic subscription before reconnecting whole socket.")]
+    public int maxImageResubscribeAttempts = 2;
+
+    [Tooltip("Try to recover image stream automatically.")]
+    public bool autoRecoverImageStream = true;
+
     [SerializeField] private GameObject ShowDashboard;
     [SerializeField] private GameObject CameraPanelSettings;
     [SerializeField] private GameObject DashboardPanelSettings;
@@ -80,6 +93,15 @@ public class RosbridgeImageSubscriber : MonoBehaviour
 
     private bool currentConnectionState = false;
     private bool reconnectCoroutineScheduled = false;
+
+    private volatile bool hasReceivedAnyImageFrame;
+    private volatile bool waitingForFirstImage;
+    private volatile float lastImageMessageTime;
+
+    private Coroutine imageStartupWatchdogCoroutine;
+    private Coroutine imageSilenceWatchdogCoroutine;
+
+    private int imageResubscribeAttempts;
 
     private sealed class TopicSubscription
     {
@@ -162,6 +184,11 @@ public class RosbridgeImageSubscriber : MonoBehaviour
     {
         try
         {
+            StopImageWatchdogs();
+            waitingForFirstImage = false;
+            hasReceivedAnyImageFrame = false;
+            imageResubscribeAttempts = 0;
+
             wantConnection = false;
             isStopping = true;
             reconnectCoroutineScheduled = false;
@@ -278,6 +305,55 @@ public class RosbridgeImageSubscriber : MonoBehaviour
             Handler = handler,
             ThrottleRateMs = Mathf.Max(0, throttleRateMs)
         };
+    }
+
+    private void SendSubscribe(TopicSubscription sub)
+    {
+        if (ws == null || sub == null) return;
+
+        object payload;
+        if (sub.ThrottleRateMs > 0)
+        {
+            payload = new
+            {
+                op = "subscribe",
+                topic = sub.Topic,
+                type = sub.RosType,
+                throttle_rate = sub.ThrottleRateMs
+            };
+        }
+        else
+        {
+            payload = new
+            {
+                op = "subscribe",
+                topic = sub.Topic,
+                type = sub.RosType
+            };
+        }
+
+        string json = JsonConvert.SerializeObject(payload);
+        ws.Send(json);
+
+        Debug.Log($"[ROS] Subscribed to topic: {sub.Topic} ({sub.RosType})");
+        SafeLog($"[ROS] Subscribed to topic: {sub.Topic}");
+    }
+
+    private void SendUnsubscribe(string topic)
+    {
+        if (ws == null || string.IsNullOrWhiteSpace(topic)) return;
+
+        var payload = new
+        {
+            op = "unsubscribe",
+            topic = topic
+        };
+
+        string json = JsonConvert.SerializeObject(payload);
+        ws.Send(json);
+
+        Debug.Log($"[ROS] Unsubscribed from topic: {topic}");
+        SafeLog($"[ROS] Unsubscribed from topic: {topic}");
     }
 
     // ======================== MAIN THREAD DISPATCH ========================
@@ -532,30 +608,20 @@ public class RosbridgeImageSubscriber : MonoBehaviour
             foreach (var pair in subscriptions)
             {
                 var sub = pair.Value;
-
-                object payload;
-                if (sub.ThrottleRateMs > 0)
-                {
-                    payload = new
-                    {
-                        op = "subscribe",
-                        topic = sub.Topic,
-                        type = sub.RosType,
-                        throttle_rate = sub.ThrottleRateMs
-                    };
-                }
-                else
-                {
-                    payload = new
-                    {
-                        op = "subscribe",
-                        topic = sub.Topic,
-                        type = sub.RosType
-                    };
-                }
-
-                ws?.Send(JsonConvert.SerializeObject(payload));
+                SendSubscribe(sub);
             }
+
+            RunOnMainThread(() =>
+            {
+                if (!this || isDestroyedOrQuitting) return;
+
+                hasReceivedAnyImageFrame = false;
+                waitingForFirstImage = true;
+                imageResubscribeAttempts = 0;
+                lastImageMessageTime = Time.unscaledTime;
+
+                RestartImageWatchdogs();
+            });
         }
         catch (Exception ex)
         {
@@ -720,12 +786,12 @@ public class RosbridgeImageSubscriber : MonoBehaviour
                 batteryText.color = new Color(0, 104f / 255f, 0);
                 batteryIcon.color = new Color(0, 104f / 255f, 0);
             }
-            else if (batteryVolt < 12f)
+            else if (batteryVolt >= 11f)
             {
                 batteryText.color = Color.yellow;
                 batteryIcon.color = Color.yellow;
             }
-            else if (batteryVolt < 11f)
+            else
             {
                 batteryText.color = Color.red;
                 batteryIcon.color = Color.red;
@@ -807,6 +873,14 @@ public class RosbridgeImageSubscriber : MonoBehaviour
         }
 
         lastFrameApplyTime = Time.unscaledTime;
+
+        if (ok)
+        {
+            hasReceivedAnyImageFrame = true;
+            waitingForFirstImage = false;
+            imageResubscribeAttempts = 0;
+            lastImageMessageTime = Time.unscaledTime;
+        }
 
         if (ok && !currentConnectionState)
             SetState(true);
@@ -940,6 +1014,146 @@ public class RosbridgeImageSubscriber : MonoBehaviour
         {
             SafeLog($"[ROS] SetState exception: {ex.Message}");
             Debug.LogWarning($"[ROS] SetState exception: {ex.Message}");
+        }
+    }
+
+    private void RestartImageWatchdogs()
+    {
+        StopImageWatchdogs();
+
+        if (firstImageTimeoutSec > 0f)
+            imageStartupWatchdogCoroutine = StartCoroutine(ImageStartupWatchdog());
+
+        if (imageSilenceTimeoutSec > 0f)
+            imageSilenceWatchdogCoroutine = StartCoroutine(ImageSilenceWatchdog());
+    }
+
+    private void StopImageWatchdogs()
+    {
+        if (imageStartupWatchdogCoroutine != null)
+        {
+            StopCoroutine(imageStartupWatchdogCoroutine);
+            imageStartupWatchdogCoroutine = null;
+        }
+
+        if (imageSilenceWatchdogCoroutine != null)
+        {
+            StopCoroutine(imageSilenceWatchdogCoroutine);
+            imageSilenceWatchdogCoroutine = null;
+        }
+    }
+
+    private IEnumerator ImageStartupWatchdog()
+    {
+        float startTime = Time.unscaledTime;
+
+        SafeLog($"[ROS] Waiting for first image from topic: {imageTopic}");
+
+        while (!isDestroyedOrQuitting && isConnected && waitingForFirstImage)
+        {
+            if (Time.unscaledTime - startTime >= firstImageTimeoutSec)
+            {
+                Debug.LogWarning($"[ROS] No image frames received from topic '{imageTopic}' within {firstImageTimeoutSec:0.##} sec.");
+                SafeLog($"[ROS] No image frames from '{imageTopic}' within {firstImageTimeoutSec:0.##} sec. Camera may be disabled.");
+
+                waitingForFirstImage = false;
+
+                if (autoRecoverImageStream)
+                    TryRecoverImageStream();
+
+                yield break;
+            }
+
+            yield return null;
+        }
+    }
+
+    private IEnumerator ImageSilenceWatchdog()
+    {
+        while (!isDestroyedOrQuitting)
+        {
+            if (!isConnected)
+            {
+                yield return null;
+                continue;
+            }
+
+            if (hasReceivedAnyImageFrame)
+            {
+                float silence = Time.unscaledTime - lastImageMessageTime;
+                if (silence >= imageSilenceTimeoutSec)
+                {
+                    Debug.LogWarning($"[ROS] Image stream stalled for {silence:0.##} sec on topic '{imageTopic}'.");
+                    SafeLog($"[ROS] Image stream stalled on '{imageTopic}' for {silence:0.##} sec.");
+
+                    hasReceivedAnyImageFrame = false;
+                    waitingForFirstImage = true;
+
+                    if (autoRecoverImageStream)
+                        TryRecoverImageStream();
+
+                    yield break;
+                }
+            }
+
+            yield return null;
+        }
+    }
+
+    private void TryRecoverImageStream()
+    {
+        if (!autoRecoverImageStream || !isConnected || ws == null)
+            return;
+
+        if (!subscriptions.TryGetValue(imageTopic, out var imageSub))
+        {
+            SafeLog($"[ROS] Cannot recover image stream: topic '{imageTopic}' is not registered.");
+            return;
+        }
+
+        if (imageResubscribeAttempts < maxImageResubscribeAttempts)
+        {
+            imageResubscribeAttempts++;
+
+            SafeLog($"[ROS] Recovering image stream: resubscribe attempt {imageResubscribeAttempts}/{maxImageResubscribeAttempts}");
+
+            try
+            {
+                SendUnsubscribe(imageTopic);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ROS] Unsubscribe image topic exception: {ex.Message}");
+                SafeLog($"[ROS] Unsubscribe image topic exception: {ex.Message}");
+            }
+
+            try
+            {
+                SendSubscribe(imageSub);
+                waitingForFirstImage = true;
+                hasReceivedAnyImageFrame = false;
+                lastImageMessageTime = Time.unscaledTime;
+
+                RestartImageWatchdogs();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ROS] Resubscribe image topic exception: {ex.Message}");
+                SafeLog($"[ROS] Resubscribe image topic exception: {ex.Message}");
+            }
+        }
+        else
+        {
+            SafeLog("[ROS] Image topic recovery failed. Reconnecting WebSocket...");
+            Debug.LogWarning("[ROS] Image topic recovery failed. Reconnecting WebSocket...");
+
+            StopConnection();
+
+            if (!isDestroyedOrQuitting)
+            {
+                wantConnection = true;
+                SafeConnect();
+            }
         }
     }
 }
