@@ -119,6 +119,8 @@ Assets/
 4. Set build target to Quest 2/3
 5. Build and deploy to headset
 
+A pre-built APK (v1.1.0) is available in the project root or via [Releases](https://github.com/homebrewroboticsclub/vr-teleop/releases).
+
 ## Customization
 
 To adapt this application for different robots:
