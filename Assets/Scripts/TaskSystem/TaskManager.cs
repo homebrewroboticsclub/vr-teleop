@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,22 +13,13 @@ public class TaskManager : MonoBehaviour
     [SerializeField] private RosbridgeImageSubscriber imageSubscriber;
     [SerializeField] private TeleopHelpRequestsManager helpRequestsManager;
     [SerializeField] private GameObject TaskPanel;
+    [SerializeField] private TMP_Text TaskIDText;
+    [SerializeField] private TMP_Text ErrorContextText;
+    [SerializeField] private TMP_Text SituationReportText;
 
     private List<GameObject> currentTasks = new List<GameObject>();
 
     private TaskData activeSelection = null;
-
-    //private IEnumerator Start()
-    //{
-    //    yield return new WaitForSeconds(1f);
-    //    AddNewTask("Test");
-    //    yield return null;
-    //    AddNewTask("Test1");
-    //    yield return null;
-    //    AddNewTask("Test2");
-    //    yield return null;
-    //    AddNewTask("Test3");
-    //}
 
     public void AddNewTask(TeleopHelpRequestDto data)
     {
@@ -122,6 +114,9 @@ public class TaskManager : MonoBehaviour
 
             Debug.Log("Session ID: " + sessionId);
 
+            TaskIDText.text = activeSelection.TaskId;
+            ErrorContextText.text = activeSelection.ErrorContextJson;
+            SituationReportText.text = activeSelection.SituationReport;
 
             activeSelection.SessionId = sessionId;
             imageSubscriber.InitConnection(sessionId);

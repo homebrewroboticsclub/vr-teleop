@@ -46,6 +46,9 @@ public class TeleopHelpRequestMetadataDto
 
     [JsonProperty("error_context")]
     public string errorContext;
+
+    [JsonProperty("situation_report")]
+    public string situationReport;
 }
 
 [Serializable]

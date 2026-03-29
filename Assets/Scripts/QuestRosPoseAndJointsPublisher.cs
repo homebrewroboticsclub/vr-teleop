@@ -7,7 +7,6 @@ using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.XR;
-using WebSocketSharp;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -17,7 +16,6 @@ using UnityEngine.UI;
 public class QuestRosPoseAndJointsPublisher : MonoBehaviour
 {
     [Header("ROSBridge")]
-    //public string wsUrl = "ws://192.168.1.100:9090";
     public string poseArrayTopic = "/quest/poses";   // geometry_msgs/PoseArray
     public string jointStateTopic = "/quest/joints"; // sensor_msgs/JointState
     public string poseFrameId = "unity_world";       // header.frame_id for PoseArray
@@ -128,7 +126,6 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
 
     private Coroutine sendLoopCoroutine;
 
-    //private WebSocket ws;
     private WaitForSeconds wait;
     private float lastDebug;
 
@@ -211,8 +208,6 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
 
     public void InitConnection()
     {
-        //wsUrl = $"ws://{IpText.text}:{PortText.text}/ws/teleop/session/{taskManager.GetActiveTaskData().SessionId}?token={TeleopAuthSession.AccessToken}";
-
         Disconnect();
 
         if (!gameObject.activeInHierarchy)
@@ -279,109 +274,6 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
     {
         Disconnect();
     }
-
-    //void Connect()
-    //{
-    //    ws = new WebSocket(wsUrl);
-    //    ws.Compression = WebSocketSharp.CompressionMethod.Deflate;
-
-    //    ws.OnOpen += (_, __) =>
-    //    {
-    //        Debug.Log("[ROS TX] WS opened");
-    //        consecutiveBadRttSamples = 0;
-
-    //        ws.Send(JsonConvert.SerializeObject(new
-    //        {
-    //            op = "advertise",
-    //            topic = poseArrayTopic,
-    //            type = "geometry_msgs/PoseArray",
-    //            latch = false
-    //        }));
-
-    //        ws.Send(JsonConvert.SerializeObject(new
-    //        {
-    //            op = "advertise",
-    //            topic = jointStateTopic,
-    //            type = "sensor_msgs/JointState",
-    //            latch = false
-    //        }));
-
-    //        if (enableRosTimeSync)
-    //        {
-    //            ws.Send(JsonConvert.SerializeObject(new
-    //            {
-    //                op = "advertise",
-    //                topic = timeSyncRequestTopic,
-    //                type = "std_msgs/String",
-    //                latch = false
-    //            }));
-
-    //            ws.Send(JsonConvert.SerializeObject(new
-    //            {
-    //                op = "subscribe",
-    //                topic = timeSyncResponseTopic,
-    //                type = "std_msgs/String"
-    //            }));
-    //        }
-
-    //        if (sendRecordSessionEvents)
-    //        {
-    //            ws.Send(JsonConvert.SerializeObject(new
-    //            {
-    //                op = "advertise",
-    //                topic = recordSessionTopic,
-    //                type = "std_msgs/String",
-    //                latch = true
-    //            }));
-    //        }
-
-    //        if (subscribeTeleopState)
-    //        {
-    //            ws.Send(JsonConvert.SerializeObject(new
-    //            {
-    //                op = "subscribe",
-    //                topic = teleopStateTopic,
-    //                type = "std_msgs/String"
-    //            }));
-
-    //            if (debugTeleopState)
-    //                Debug.Log($"[ROS TX] Subscribed to teleop state topic: {teleopStateTopic}");
-    //        }
-    //    };
-
-
-    //    ws.OnMessage += (_, e) =>
-    //    {
-    //        if (!e.IsText) return;
-
-    //        try
-    //        {
-    //            var jo = JsonConvert.DeserializeObject<JObject>(e.Data);
-    //            if (jo == null) return;
-
-    //            string topic = jo["topic"]?.Value<string>();
-    //            var msg = jo["msg"];
-
-    //            if (topic == timeSyncResponseTopic)
-    //            {
-    //                HandleTimeSyncResponse(msg);
-    //            }
-    //            else if (subscribeTeleopState && topic == teleopStateTopic)
-    //            {
-    //                HandleTeleopStateMessage(msg);
-    //            }
-    //        }
-    //        catch (Exception ex)
-    //        {
-    //            Debug.LogWarning("[ROS TX] OnMessage parse error: " + ex.Message);
-    //        }
-    //    };
-
-    //    ws.OnError += (_, e) => Debug.LogWarning("[ROS TX] WS error: " + e.Message);
-    //    ws.OnClose += (_, e) => Debug.LogWarning("[ROS TX] WS closed: " + e.Reason);
-
-    //    ws.ConnectAsync();
-    //}
 
     IEnumerator SendLoop()
     {
@@ -822,7 +714,7 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
             }
             else
             {
-                const double alpha = 0.15; // сглаживание
+                const double alpha = 0.15; // smoothing
                 rosClockOffsetSec = rosClockOffsetSec * (1.0 - alpha) + measuredOffsetSec * alpha;
             }
 
@@ -873,7 +765,6 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
             rosTimeWasSynchronizedAtStart = rosTimeSynchronized,
             ntpTimeWasSynchronizedAtStart = ntpTimeSynchronized,
 
-            //sourceWsUrl = wsUrl,
             sourceSendHz = sendHz
         };
 
@@ -963,26 +854,26 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
         return result;
     }
 
-    private JsonVec3 ToJsonVec3(Vector3 v)
-    {
-        return new JsonVec3
-        {
-            x = v.x,
-            y = v.y,
-            z = v.z
-        };
-    }
+    //private JsonVec3 ToJsonVec3(Vector3 v)
+    //{
+    //    return new JsonVec3
+    //    {
+    //        x = v.x,
+    //        y = v.y,
+    //        z = v.z
+    //    };
+    //}
 
-    private JsonQuat ToJsonQuat(Quaternion q)
-    {
-        return new JsonQuat
-        {
-            x = q.x,
-            y = q.y,
-            z = q.z,
-            w = q.w
-        };
-    }
+    //private JsonQuat ToJsonQuat(Quaternion q)
+    //{
+    //    return new JsonQuat
+    //    {
+    //        x = q.x,
+    //        y = q.y,
+    //        z = q.z,
+    //        w = q.w
+    //    };
+    //}
 
     IEnumerator InitializeNtpTime()
     {
@@ -1102,7 +993,6 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
 
         rttSec = TimeSpan.FromTicks(recvTicks - sendTicks).TotalSeconds;
 
-        // приближение: считаем, что ответ соответствует середине RTT
         networkUtc = serverUtc.AddSeconds(rttSec * 0.5);
         return true;
     }
@@ -1181,8 +1071,7 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
             rttGatePassed = true;
         }
 
-        if (sendLoopCoroutine == null)
-            sendLoopCoroutine = StartCoroutine(SendLoop());
+        sendLoopCoroutine ??= StartCoroutine(SendLoop());
 
         if (enableRosTimeSync && timeSyncCoroutine == null)
             timeSyncCoroutine = StartCoroutine(TimeSyncLoop());
@@ -1198,191 +1087,6 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
 
         Debug.Log($"[ROS TX] Control session started over shared socket. lastRtt={lastMeasuredRttMs} ms");
     }
-
-    //private IEnumerator RunRttPreflightGate()
-    //{
-    //    if (ws == null || ws.ReadyState != WebSocketState.Open)
-    //    {
-    //        rttGatePassed = false;
-    //        Debug.LogWarning("[ROS TX] RTT preflight failed: websocket is not open.");
-    //        yield break;
-    //    }
-
-    //    var samples = new List<int>();
-
-    //    for (int i = 0; i < rttPreflightSamples; i++)
-    //    {
-    //        if (ws == null || ws.ReadyState != WebSocketState.Open)
-    //        {
-    //            rttGatePassed = false;
-    //            Debug.LogWarning("[ROS TX] RTT preflight interrupted: websocket closed.");
-    //            yield break;
-    //        }
-
-    //        if (TryMeasureCurrentRttMs(out int rttMs))
-    //        {
-    //            samples.Add(rttMs);
-    //            lastMeasuredRttMs = rttMs;
-
-    //            if (debugRttGate)
-    //                Debug.Log($"[ROS TX] RTT preflight sample {i + 1}/{rttPreflightSamples}: {rttMs} ms");
-    //        }
-    //        else
-    //        {
-    //            if (debugRttGate)
-    //                Debug.LogWarning($"[ROS TX] RTT preflight sample {i + 1}/{rttPreflightSamples}: failed");
-    //        }
-
-    //        if (i < rttPreflightSamples - 1)
-    //            yield return new WaitForSecondsRealtime(Mathf.Max(0.01f, rttPreflightIntervalSec));
-    //    }
-
-    //    if (samples.Count == 0)
-    //    {
-    //        rttGatePassed = false;
-    //        Debug.LogWarning("[ROS TX] RTT preflight failed: no successful ping samples.");
-    //        yield break;
-    //    }
-
-    //    samples.Sort();
-    //    int medianRttMs = samples[samples.Count / 2];
-    //    lastMeasuredRttMs = medianRttMs;
-
-    //    rttGatePassed = medianRttMs < rttBlockThresholdMs;
-
-    //    if (rttGatePassed)
-    //    {
-    //        Debug.Log($"[ROS TX] RTT preflight PASSED. median={medianRttMs} ms, threshold={rttBlockThresholdMs} ms");
-    //    }
-    //    else
-    //    {
-    //        Debug.LogWarning($"[ROS TX] RTT preflight BLOCKED. median={medianRttMs} ms, threshold={rttBlockThresholdMs} ms");
-    //    }
-    //}
-
-    //private IEnumerator RttMonitorLoop()
-    //{
-    //    yield return new WaitForSecondsRealtime(Mathf.Max(0.1f, rttMonitorIntervalSec));
-
-    //    while (ws != null && ws.ReadyState == WebSocketState.Open)
-    //    {
-    //        if (TryMeasureCurrentRttMs(out int rttMs))
-    //        {
-    //            lastMeasuredRttMs = rttMs;
-
-    //            bool bad = rttMs >= rttBlockThresholdMs;
-
-    //            if (bad)
-    //            {
-    //                consecutiveBadRttSamples++;
-
-    //                Debug.LogWarning(
-    //                    $"[ROS TX] RTT monitor: bad sample {consecutiveBadRttSamples}/{rttBadSamplesToStop}, " +
-    //                    $"rtt={rttMs} ms, threshold={rttBlockThresholdMs} ms");
-    //            }
-    //            else
-    //            {
-    //                consecutiveBadRttSamples = 0;
-
-    //                if (debugRttGate)
-    //                    Debug.Log($"[ROS TX] RTT monitor: OK rtt={rttMs} ms");
-    //            }
-
-    //            if (consecutiveBadRttSamples >= rttBadSamplesToStop)
-    //            {
-    //                Debug.LogWarning(
-    //                    $"[ROS TX] RTT safety gate triggered during control session. " +
-    //                    $"RTT={rttMs} ms >= {rttBlockThresholdMs} ms");
-
-    //                disconnectRequestedByRttGate = true;
-    //                StopControlSessionByRttGate();
-    //                yield break;
-    //            }
-    //        }
-    //        else
-    //        {
-    //            consecutiveBadRttSamples++;
-
-    //            Debug.LogWarning(
-    //                $"[ROS TX] RTT monitor failed ({consecutiveBadRttSamples}/{rttBadSamplesToStop}).");
-
-    //            if (consecutiveBadRttSamples >= rttBadSamplesToStop)
-    //            {
-    //                Debug.LogWarning("[ROS TX] RTT safety gate triggered: repeated ping failures.");
-    //                disconnectRequestedByRttGate = true;
-    //                StopControlSessionByRttGate();
-    //                yield break;
-    //            }
-    //        }
-
-    //        yield return new WaitForSecondsRealtime(Mathf.Max(0.1f, rttMonitorIntervalSec));
-    //    }
-    //}
-
-    //private IEnumerator RunRttPreflightGateSharedSocket()
-    //{
-    //    if (rosbridgeSubscriber == null || !rosbridgeSubscriber.IsSocketOpen)
-    //    {
-    //        rttGatePassed = false;
-    //        Debug.LogWarning("[ROS TX] RTT preflight failed: shared websocket is not open.");
-    //        yield break;
-    //    }
-
-    //    var samples = new List<int>();
-
-    //    for (int i = 0; i < rttPreflightSamples; i++)
-    //    {
-    //        if (rosbridgeSubscriber == null || !rosbridgeSubscriber.IsSocketOpen)
-    //        {
-    //            rttGatePassed = false;
-    //            Debug.LogWarning("[ROS TX] RTT preflight interrupted: shared websocket closed.");
-    //            yield break;
-    //        }
-
-    //        if (TryMeasureCurrentRttMs(out int rttMs))
-    //        {
-    //            samples.Add(rttMs);
-    //            lastMeasuredRttMs = rttMs;
-
-    //            if (debugRttGate)
-    //            {
-    //                Debug.Log($"[ROS TX] RTT preflight(shared) sample {i + 1}/{rttPreflightSamples}: {rttMs} ms");
-    //            }
-    //        }
-    //        else
-    //        {
-    //            if (debugRttGate)
-    //            {
-    //                Debug.LogWarning($"[ROS TX] RTT preflight(shared) sample {i + 1}/{rttPreflightSamples}: failed");
-    //            }
-    //        }
-
-    //        if (i < rttPreflightSamples - 1)
-    //            yield return new WaitForSecondsRealtime(Mathf.Max(0.01f, rttPreflightIntervalSec));
-    //    }
-
-    //    if (samples.Count == 0)
-    //    {
-    //        rttGatePassed = false;
-    //        Debug.LogWarning("[ROS TX] RTT preflight failed: no successful RTT samples.");
-    //        yield break;
-    //    }
-
-    //    samples.Sort();
-    //    int medianRttMs = samples[samples.Count / 2];
-    //    lastMeasuredRttMs = medianRttMs;
-
-    //    rttGatePassed = medianRttMs < rttBlockThresholdMs;
-
-    //    if (rttGatePassed)
-    //    {
-    //        Debug.Log($"[ROS TX] RTT preflight(shared) PASSED. median={medianRttMs} ms, threshold={rttBlockThresholdMs} ms");
-    //    }
-    //    else
-    //    {
-    //        Debug.LogWarning($"[ROS TX] RTT preflight(shared) BLOCKED. median={medianRttMs} ms, threshold={rttBlockThresholdMs} ms");
-    //    }
-    //}
 
     private IEnumerator RunRttPreflightGateSharedSocket()
     {
@@ -1448,20 +1152,6 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
             Debug.LogWarning($"[ROS TX] RTT preflight(shared) BLOCKED. median={medianRttMs} ms, threshold={rttBlockThresholdMs} ms");
     }
 
-    //private bool TryMeasureCurrentRttMs(out int rttMs)
-    //{
-    //    rttMs = -1;
-
-    //    if (rosbridgeSubscriber == null)
-    //        return false;
-
-    //    if (!rosbridgeSubscriber.TryMeasureSharedSocketRttMs(out rttMs))
-    //        return false;
-
-    //    rttMs += Mathf.Max(0, debugArtificialRttOffsetMs);
-    //    return true;
-    //}
-
     private bool TryMeasureCurrentRttMs(out int rttMs)
     {
         rttMs = -1;
@@ -1490,60 +1180,6 @@ public class QuestRosPoseAndJointsPublisher : MonoBehaviour
         DisableControlButton.gameObject.SetActive(true);
         DisableControlButton.onClick.Invoke();
     }
-
-    //private void DisconnectTxOnly()
-    //{
-    //    controlSessionActive = false;
-    //    rttGatePassed = false;
-    //    isConnectingTx = false;
-    //    consecutiveBadRttSamples = 0;
-    //    disconnectRequestedByRttGate = false;
-    //    lastMeasuredRttMs = -1;
-    //    isRobotControlled = false;
-
-    //    if (sendLoopCoroutine != null)
-    //    {
-    //        StopCoroutine(sendLoopCoroutine);
-    //        sendLoopCoroutine = null;
-    //    }
-
-    //    if (timeSyncCoroutine != null)
-    //    {
-    //        StopCoroutine(timeSyncCoroutine);
-    //        timeSyncCoroutine = null;
-    //    }
-
-    //    if (rttMonitorCoroutine != null)
-    //    {
-    //        StopCoroutine(rttMonitorCoroutine);
-    //        rttMonitorCoroutine = null;
-    //    }
-
-    //    rosTimeSynchronized = false;
-    //    rosClockOffsetSec = 0.0;
-    //    lastSyncRttSec = 0.0;
-    //    lastTimeSyncId = null;
-    //    lastTimeSyncLocalSendNs = 0L;
-
-    //    try
-    //    {
-    //        if (ws != null && ws.ReadyState == WebSocketState.Open)
-    //        {
-    //            ws.Send(JsonConvert.SerializeObject(new { op = "unadvertise", topic = poseArrayTopic }));
-    //            ws.Send(JsonConvert.SerializeObject(new { op = "unadvertise", topic = jointStateTopic }));
-    //            ws.Send(JsonConvert.SerializeObject(new { op = "unadvertise", topic = recordSessionTopic }));
-    //        }
-    //    }
-    //    catch { }
-
-    //    try
-    //    {
-    //        ws?.Close();
-    //    }
-    //    catch { }
-
-    //    ws = null;
-    //}
 
     private bool CanStartControlFromSubscriberRtt(out string reason)
     {

@@ -19,6 +19,7 @@ public class TaskData : MonoBehaviour
     public string Message;
     public string TaskId;
     [TextArea] public string ErrorContextJson;
+    [TextArea] public string SituationReport;
     public string CreatedAtRaw;
     public string SessionId;
 
@@ -65,6 +66,7 @@ public class TaskData : MonoBehaviour
         Message = dto.payload?.message ?? string.Empty;
         TaskId = dto.payload?.metadata?.taskId ?? string.Empty;
         ErrorContextJson = dto.payload?.metadata?.errorContext ?? string.Empty;
+        SituationReport = dto.payload?.metadata?.situationReport ?? string.Empty;
         CreatedAtRaw = dto.createdAt ?? string.Empty;
 
         UpdateUiText();

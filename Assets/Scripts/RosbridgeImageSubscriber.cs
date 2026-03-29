@@ -22,10 +22,6 @@ public class RosbridgeImageSubscriber : MonoBehaviour
     public TMP_Text batteryText;
     public Image batteryIcon;
 
-    //[Header("Task")]
-    //public string taskTopic = "/task";
-    //[SerializeField] private TaskManager taskManager;
-
     [Header("Target")]
     public RawImage targetUI;
     public Renderer targetRenderer;
@@ -77,15 +73,11 @@ public class RosbridgeImageSubscriber : MonoBehaviour
     [Tooltip("Try to recover image stream automatically.")]
     public bool autoRecoverImageStream = true;
 
-    //[SerializeField] private GameObject ShowDashboard;
     [SerializeField] private GameObject CameraPanelSettings;
     [SerializeField] private GameObject RecordPanel;
     [SerializeField] private GameObject TaskPanel;
     [SerializeField] private SoftHeadFollower DashboardHeadFollower;
     [SerializeField] private GameObject LogoutButton;
-    //[SerializeField] private GameObject DashboardPanelSettings;
-    //[SerializeField] private GameObject DisableControlButton;
-    //[SerializeField] private GameObject PanelSettings;
 
     [SerializeField] private TMP_Text IpText;
     [SerializeField] private TMP_Text PortText;
@@ -352,11 +344,6 @@ public class RosbridgeImageSubscriber : MonoBehaviour
             "std_msgs/UInt16",
             HandleBatteryMessage
         );
-        //RegisterSubscription(
-        //    taskTopic,
-        //    "std_msgs/String",
-        //    HandleTaskMessage
-        //);
     }
 
     private void RegisterSubscription(string topic, string rosType, Action<JToken> handler, int throttleRateMs = 0)
@@ -883,50 +870,6 @@ public class RosbridgeImageSubscriber : MonoBehaviour
         }
     }
 
-    //private void HandleTaskMessage(JToken msg)
-    //{
-    //    var dataToken = msg["data"];
-    //    if (dataToken == null) return;
-
-    //    string taskText;
-    //    try
-    //    {
-    //        taskText = dataToken.Value<string>();
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Debug.LogWarning($"[ROS] Task parse error: {ex.Message}");
-    //        SafeLog($"[ROS] Task parse error: {ex.Message}");
-    //        return;
-    //    }
-
-    //    if (string.IsNullOrWhiteSpace(taskText))
-    //        return;
-
-    //    RunOnMainThread(() =>
-    //    {
-    //        try
-    //        {
-    //            if (isDestroyedOrQuitting) return;
-    //            if (!this) return;
-
-    //            if (taskManager == null)
-    //            {
-    //                Debug.LogWarning("[ROS] TaskManager is not assigned.");
-    //                SafeLog("[ROS] TaskManager is not assigned.");
-    //                return;
-    //            }
-    //            SafeLog($"[ROS] New task received: {taskText}");
-    //            taskManager.AddNewTask(taskText);
-    //        }
-    //        catch (Exception ex)
-    //        {
-    //            Debug.LogWarning($"[ROS] TaskManager.AddNewTask exception: {ex.Message}");
-    //            SafeLog($"[ROS] TaskManager.AddNewTask exception: {ex.Message}");
-    //        }
-    //    });
-    //}
-
     // ======================== UPDATE STEPS ========================
 
     private void UpdateBatteryUi()
@@ -952,26 +895,6 @@ public class RosbridgeImageSubscriber : MonoBehaviour
             }
         }
     }
-
-    //private void UpdatePing()
-    //{
-    //    if (pingIntervalSec <= 0f || !isConnected || ws == null)
-    //        return;
-
-    //    if (Time.unscaledTime - lastPingTime <= pingIntervalSec)
-    //        return;
-
-    //    try
-    //    {
-    //        ws.Ping();
-    //        lastPingTime = Time.unscaledTime;
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Debug.LogWarning($"[ROS] Ping exception: {ex.Message}");
-    //        SafeLog($"[ROS] Ping exception: {ex.Message}");
-    //    }
-    //}
 
     private void ApplyLatestFrameIfNeeded()
     {
@@ -1158,15 +1081,11 @@ public class RosbridgeImageSubscriber : MonoBehaviour
             currentConnectionState = state;
 
             if (targetUI) targetUI.enabled = state;
-            //if (ShowDashboard) ShowDashboard.SetActive(state);
             if (CameraPanelSettings) CameraPanelSettings.SetActive(state);
             if (RecordPanel) RecordPanel.SetActive(state);
             if (TaskPanel) TaskPanel.SetActive(!state);
             if (DashboardHeadFollower) DashboardHeadFollower.verticalOffset = state ? -0.83f : 0;
             if (LogoutButton) LogoutButton.SetActive(!state);
-            //if (DashboardPanelSettings) DashboardPanelSettings.SetActive(state);
-            //if (DisableControlButton) DisableControlButton.SetActive(state);
-            //if (PanelSettings) PanelSettings.SetActive(state);
         }
         catch (Exception ex)
         {
@@ -1315,35 +1234,6 @@ public class RosbridgeImageSubscriber : MonoBehaviour
         }
     }
 
-    //private bool TryMeasureCurrentRttMs(out int rttMs)
-    //{
-    //    rttMs = -1;
-
-    //    if (ws == null || ws.ReadyState != WebSocketState.Open)
-    //        return false;
-
-    //    try
-    //    {
-    //        var sw = System.Diagnostics.Stopwatch.StartNew();
-    //        bool ok = ws.Ping();
-    //        sw.Stop();
-
-    //        if (!ok)
-    //            return false;
-
-    //        int measuredMs = Mathf.RoundToInt((float)sw.Elapsed.TotalMilliseconds);
-    //        measuredMs += Mathf.Max(0, debugArtificialRttOffsetMs);
-
-    //        rttMs = measuredMs;
-    //        return true;
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Debug.LogWarning($"[ROS] RTT measure failed: {ex.Message}");
-    //        return false;
-    //    }
-    //}
-
     private void BeginAsyncRttProbe()
     {
         if (rttProbeInFlight)
@@ -1384,7 +1274,6 @@ public class RosbridgeImageSubscriber : MonoBehaviour
 
             RunOnMainThread(() =>
             {
-                // игнорируем устаревший результат
                 if (probeToken != lastRttProbeToken)
                 {
                     rttProbeInFlight = false;
@@ -1410,36 +1299,6 @@ public class RosbridgeImageSubscriber : MonoBehaviour
             });
         });
     }
-
-    //private IEnumerator RttMonitorLoop()
-    //{
-    //    while (!isDestroyedOrQuitting)
-    //    {
-    //        if (!enableRttMonitor || !isConnected || ws == null || ws.ReadyState != WebSocketState.Open)
-    //        {
-    //            yield return null;
-    //            continue;
-    //        }
-
-    //        if (TryMeasureCurrentRttMs(out int rttMs))
-    //        {
-    //            lastMeasuredRttMs = rttMs;
-    //            hasValidRttSample = true;
-    //            rttAboveThreshold = rttMs >= rttBlockThresholdMs;
-    //            lastRttMeasureTime = Time.unscaledTime;
-    //        }
-    //        else
-    //        {
-    //            hasValidRttSample = false;
-    //            rttAboveThreshold = false;
-    //            lastMeasuredRttMs = -1;
-    //        }
-
-    //        UpdatePingUi();
-
-    //        yield return new WaitForSecondsRealtime(Mathf.Max(0.1f, rttMeasureIntervalSec));
-    //    }
-    //}
 
     private IEnumerator RttMonitorLoop()
     {
@@ -1509,7 +1368,6 @@ public class RosbridgeImageSubscriber : MonoBehaviour
         if (!handlers.Contains(handler))
             handlers.Add(handler);
 
-        // topic нужен в subscriptions только как описание подписки
         if (!subscriptions.ContainsKey(topic))
         {
             RegisterSubscription(topic, rosType, _ => { });

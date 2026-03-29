@@ -218,8 +218,6 @@ public class TeleopHelpRequestsManager : MonoBehaviour
 
     private void SetStatus(string text)
     {
-        //Debug.Log(text);
-
         if (logs != null)
             logs.SetText(text);
     }

@@ -20,23 +20,15 @@ public class DatasetManager : MonoBehaviour
 
     [SerializeField] private TMP_Text IpText;
     [SerializeField] private TMP_Text PortText;
-    [SerializeField] private string uploadDatasetPath = "/upload_dataset";
 
     [SerializeField] private AutoDestroyTMPText LogText;
 
     private List<GameObject> currentRecords = new List<GameObject>();
 
-    //private IEnumerator Start()
-    //{
-    //    yield return new WaitForSeconds(1f);
-    //    AddNewRecord();
-    //    yield return null;
-    //    AddNewRecord();
-    //    yield return null;
-    //    AddNewRecord();
-    //    yield return null;
-    //    AddNewRecord();
-    //}
+    private long acceptedAtUnixTimeNs;
+    private string acceptedAtUtcIso;
+    private bool hasAcceptedAt;
+    private readonly List<TeleopControlEvent> teleopControlEvents = new();
 
     public void AddNewRecord()
     {
@@ -167,8 +159,12 @@ public class DatasetManager : MonoBehaviour
         var payload = new DatasetUploadRequest
         {
             source = "unity_quest_dataset",
-            generatedUtcIso = System.DateTime.UtcNow.ToString("o")
+            generatedUtcIso = System.DateTime.UtcNow.ToString("o"),
+            acceptedAtUtcIso = hasAcceptedAt ? acceptedAtUtcIso : null,
+            teleopControl = new TeleopControlEventsBlock(),
         };
+
+        payload.teleopControl.events.AddRange(teleopControlEvents);
 
         foreach (var recordObj in currentRecords)
         {
@@ -210,6 +206,11 @@ public class DatasetManager : MonoBehaviour
             string message = $"[Dataset] Upload success: {request.downloadHandler.text}";
             if (LogText != null) LogText.SetText(message);
             Debug.Log(message);
+
+            teleopControlEvents.Clear();
+            hasAcceptedAt = false;
+            acceptedAtUnixTimeNs = 0L;
+            acceptedAtUtcIso = null;
         }
         else
         {
@@ -218,5 +219,32 @@ public class DatasetManager : MonoBehaviour
             if (LogText != null) LogText.SetText(message);
             Debug.LogError(message);
         }
+    }
+
+    public void MarkAcceptedInWork()
+    {
+        acceptedAtUtcIso = System.DateTime.UtcNow.ToString("o");
+        hasAcceptedAt = true;
+
+        Debug.Log($"[Dataset] Accepted in work at {acceptedAtUtcIso} ({acceptedAtUnixTimeNs})");
+
+        if (LogText != null)
+            LogText.SetText($"[Dataset] Accepted in work: {acceptedAtUtcIso}");
+    }
+
+    public void RegisterControlEvent(bool hasControl)
+    {
+        var evt = new TeleopControlEvent
+        {
+            eventType = hasControl ? "get_control" : "lost_control",
+            timestampUtcIso = System.DateTime.UtcNow.ToString("o")
+        };
+
+        teleopControlEvents.Add(evt);
+
+        Debug.Log($"[Dataset] Control event registered: {evt.eventType} at {evt.timestampUtcIso}");
+
+        if (LogText != null)
+            LogText.SetText($"[Dataset] Control event: {evt.eventType}");
     }
 }
