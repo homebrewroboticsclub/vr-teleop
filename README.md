@@ -1,6 +1,6 @@
 # Robot MR Control - VR Teleoperation Application
 
-> **Related Project**: This VR application works with the [teleop_fetch ROS package](../teleop_fetch-AngelsContr) which provides robot-side implementation for teleoperation.
+> **Related Project**: This VR application works with the [teleop_fetch ROS package](https://github.com/homebrewroboticsclub/br-vr) which provides robot-side implementation for teleoperation.
 
 ## Overview
 
@@ -20,7 +20,7 @@ Unity-based Mixed Reality application for Meta Quest VR headsets that enables in
 - **Hardware**: Meta Quest 2/3/Pro VR headset
 - **Software**: Unity (Mixed Reality)
 - **Network**: Same local network as the robot
-- **Robot Requirements**: Robot must have the [teleop_fetch package](../teleop_fetch) installed and running
+- **Robot Requirements**: Robot must have the [teleop_fetch package](https://github.com/homebrewroboticsclub/br-vr) installed and running
 
 ## Dependencies
 
@@ -35,7 +35,7 @@ Unity-based Mixed Reality application for Meta Quest VR headsets that enables in
 ### Prerequisites
 
 1. Ensure the robot is powered on and connected to the network
-2. Verify the [teleop_fetch ROS package](../teleop_fetch) is running on the robot
+2. Verify the [teleop_fetch ROS package](https://github.com/homebrewroboticsclub/br-vr) is running on the robot
 3. Both VR headset and robot must be on the same network
 
 ### Usage Instructions
@@ -119,6 +119,8 @@ Assets/
 4. Set build target to Quest 2/3
 5. Build and deploy to headset
 
+A pre-built APK (v1.1.0) is available in the project root or via [Releases](https://github.com/homebrewroboticsclub/vr-teleop/releases).
+
 ## Customization
 
 To adapt this application for different robots:
@@ -138,16 +140,36 @@ To adapt this application for different robots:
 **Robot not responding to movements**:
 - Ensure calibration was performed correctly
 - Check ROS topics are being published
-- Verify [teleop_fetch](../teleop_fetch-AngelsContr) node is running
+- Verify [teleop_fetch](https://github.com/homebrewroboticsclub/br-vr) node is running
 
 **Connection fails**:
 - Ping robot from a device on the same network
 - Check firewall settings
 - Verify ROSBridge port (default 9090) is accessible
 
+## New Features (v1.1.0)
+
+### Dataset Recording & .hbr Format
+
+The application now supports **dataset recording** for training robots and AI agents. The VR headset records operator commands (head and controller poses) in the **.hbr** format—an erobot-compatible dataset format. Robot-side data (camera, IMU, motors) is collected by the daemon on the robot; datasets are sent to the robot after recording completes.
+
+- **Control panel**: Toggle robot control on/off, view battery status, and receive notifications from the robot
+- **Task system**: Receive tasks from the [Task Router (x402)](https://github.com/homebrewroboticsclub/Task-router-x402) via the connected robot; operators can accept tasks, execute them, and collect training data
+- **Dataset workflow**: Incoming tasks panel for accepting/removing tasks; recording panel (active when control is enabled) for capturing head and controller data; labels assigned from task names; datasets can be uploaded to the server
+- **NTP-synchronized timestamps**: All recordings use NTP-synchronized timestamps for alignment with robot data
+- **Hand orientation fix**: Local coordinate system for hands depends only on head position, not head tilt angle
+
+### Task Router Integration
+
+When connected to a robot that integrates with [Task-router-x402](https://github.com/homebrewroboticsclub/Task-router-x402), the operator can:
+- Receive data-collection or teleoperation tasks initiated by the robot or an AI agent
+- Execute tasks and record datasets for training
+- Participate in the x402 payment flow for economically incentivized data collection
+
 ## Related Projects
 
-- **[teleop_fetch ROS Package](../teleop_fetch-AngelsContr)** - Robot-side ROS implementation for Brewie robot
+- **[teleop_fetch ROS Package](https://github.com/homebrewroboticsclub/br-vr)** - Robot-side ROS implementation for Brewie robot
+- **[Task-router-x402](https://github.com/homebrewroboticsclub/Task-router-x402)** - Orchestration service for robots and agents with x402 payment integration
 
 
 ## Authors
@@ -156,5 +178,4 @@ Homebrew Robotics Club
 
 ## Version
 
-1.0.0
-
+1.1.0
