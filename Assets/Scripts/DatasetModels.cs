@@ -95,5 +95,22 @@ public class DatasetUploadRequest
 {
     public string source;
     public string generatedUtcIso;
+    public int contractVersion = 2;
+    public string acceptedAtUtcIso;
     public List<DatasetUploadRecord> records = new();
+
+    public TeleopControlEventsBlock teleopControl = new();
+}
+
+[Serializable]
+public class TeleopControlEvent
+{
+    public string eventType;          // "get_control" or "lost_control"
+    public string timestampUtcIso;
+}
+
+[Serializable]
+public class TeleopControlEventsBlock
+{
+    public List<TeleopControlEvent> events = new();
 }
